@@ -22,8 +22,6 @@
  *  - Provides a --help flag with usage
  */
 
-const processArgs = process.argv.slice(2);
-
 function printHelp() {
   console.log(`Usage: node src/calculator.js <operation> <num1> <num2> [<num3> ...]
 
@@ -45,31 +43,6 @@ Exit codes:
   3 - division by zero
   4 - usage / argument errors
 `);
-}
-
-if (processArgs.length === 0 || processArgs.includes('--help') || processArgs.includes('-h')) {
-  printHelp();
-  process.exit(processArgs.length === 0 ? 4 : 0);
-}
-
-const op = processArgs[0];
-const rawOperands = processArgs.slice(1);
-
-if (rawOperands.length < 2) {
-  console.error('Error: at least two numeric operands are required.');
-  printHelp();
-  process.exit(4);
-}
-
-// Parse operands and validate
-const operands = rawOperands.map((s) => {
-  const n = Number(s);
-  return Number.isFinite(n) ? n : NaN;
-});
-
-if (operands.some(Number.isNaN)) {
-  console.error('Error: all operands must be valid numbers.');
-  process.exit(2);
 }
 
 function compute(operation, nums) {
@@ -97,20 +70,54 @@ function compute(operation, nums) {
   }
 }
 
-try {
-  const result = compute(op, operands);
-  // Print as-is; ensure integers show without trailing .0
-  if (Number.isInteger(result)) {
-    console.log(result);
-  } else {
-    console.log(result);
+// Export compute for testing and reuse
+module.exports = { compute, printHelp };
+
+// CLI execution only when run directly
+if (require.main === module) {
+  const processArgs = process.argv.slice(2);
+
+  if (processArgs.length === 0 || processArgs.includes('--help') || processArgs.includes('-h')) {
+    printHelp();
+    process.exit(processArgs.length === 0 ? 4 : 0);
   }
-  process.exit(0);
-} catch (err) {
-  if (err.message === 'Division by zero') {
-    console.error('Error: division by zero detected.');
-    process.exit(3);
+
+  const op = processArgs[0];
+  const rawOperands = processArgs.slice(1);
+
+  if (rawOperands.length < 2) {
+    console.error('Error: at least two numeric operands are required.');
+    printHelp();
+    process.exit(4);
   }
-  console.error('Error:', err.message);
-  process.exit(4);
+
+  // Parse operands and validate
+  const operands = rawOperands.map((s) => {
+    const n = Number(s);
+    return Number.isFinite(n) ? n : NaN;
+  });
+
+  if (operands.some(Number.isNaN)) {
+    console.error('Error: all operands must be valid numbers.');
+    process.exit(2);
+  }
+
+  try {
+    const result = compute(op, operands);
+    // Print as-is; ensure integers show without trailing .0
+    if (Number.isInteger(result)) {
+      console.log(result);
+    } else {
+      console.log(result);
+    }
+    process.exit(0);
+  } catch (err) {
+    if (err.message === 'Division by zero') {
+      console.error('Error: division by zero detected.');
+      process.exit(3);
+    }
+    console.error('Error:', err.message);
+    process.exit(4);
+  }
 }
+
