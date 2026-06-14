@@ -26,16 +26,26 @@ function printHelp() {
   console.log(`Usage: node src/calculator.js <operation> <num1> <num2> [<num3> ...]
 
 Operations:
-  add, +    Addition
-  sub, -    Subtraction
-  mul, *    Multiplication
-  div, /    Division
+  add, +       Addition
+  sub, -       Subtraction
+  mul, *       Multiplication
+  div, /       Division
+  modulo, %    Remainder (a % b)
+  power, ^, pow Exponentiation (base ^ exponent)
+  sqrt         Square root (unary)
 
 Examples:
   node src/calculator.js add 1 2 3
   node src/calculator.js sub 5 2
   node src/calculator.js mul 4 7
   node src/calculator.js div 10 2
+  node src/calculator.js modulo 10 3
+  node src/calculator.js power 2 8
+  node src/calculator.js sqrt 9
+
+Notes:
+  - sqrt is a unary operation (one operand).
+  - power requires exactly two operands: base and exponent.
 
 Exit codes:
   0 - success
@@ -43,6 +53,26 @@ Exit codes:
   3 - division by zero
   4 - usage / argument errors
 `);
+}
+
+// New helper functions
+function modulo(a, b) {
+  // JavaScript % works with floats; guard division by zero
+  if (b === 0) {
+    throw new Error('Division by zero');
+  }
+  return a % b;
+}
+
+function power(base, exponent) {
+  return Math.pow(base, exponent);
+}
+
+function squareRoot(n) {
+  if (n < 0) {
+    throw new Error('Negative input');
+  }
+  return Math.sqrt(n);
 }
 
 function compute(operation, nums) {
@@ -65,13 +95,35 @@ function compute(operation, nums) {
         }
       }
       return nums.slice(1).reduce((a, b) => a / b, nums[0]);
+    case 'modulo':
+    case '%':
+    case 'mod':
+      // implement n-ary modulo: a % b % c ... (left-associative)
+      for (let i = 1; i < nums.length; i++) {
+        if (nums[i] === 0) {
+          throw new Error('Division by zero');
+        }
+      }
+      return nums.slice(1).reduce((a, b) => modulo(a, b), nums[0]);
+    case 'power':
+    case '^':
+    case 'pow':
+      if (nums.length !== 2) {
+        throw new Error('Power requires exactly two operands');
+      }
+      return power(nums[0], nums[1]);
+    case 'sqrt':
+      if (nums.length < 1) {
+        throw new Error('Square root requires one operand');
+      }
+      return squareRoot(nums[0]);
     default:
       throw new Error(`Unknown operation: ${operation}`);
   }
 }
 
-// Export compute for testing and reuse
-module.exports = { compute, printHelp };
+// Export compute and new helpers for testing and reuse
+module.exports = { compute, printHelp, modulo, power, squareRoot };
 
 // CLI execution only when run directly
 if (require.main === module) {
@@ -100,6 +152,31 @@ if (require.main === module) {
   if (operands.some(Number.isNaN)) {
     console.error('Error: all operands must be valid numbers.');
     process.exit(2);
+  }
+
+  // Validate operand counts based on operation
+  const unaryOps = new Set(['sqrt']);
+  const binaryOnlyOps = new Set(['power', '^', 'pow']);
+  const requiresAtLeastTwo = new Set(['add', '+', 'sub', '-', 'mul', '*', 'div', '/', 'modulo', '%', 'mod']);
+
+  if (unaryOps.has(op)) {
+    if (operands.length < 1) {
+      console.error('Error: this operation requires one numeric operand.');
+      printHelp();
+      process.exit(4);
+    }
+  } else if (binaryOnlyOps.has(op)) {
+    if (operands.length !== 2) {
+      console.error('Error: this operation requires exactly two numeric operands.');
+      printHelp();
+      process.exit(4);
+    }
+  } else if (requiresAtLeastTwo.has(op)) {
+    if (operands.length < 2) {
+      console.error('Error: at least two numeric operands are required for this operation.');
+      printHelp();
+      process.exit(4);
+    }
   }
 
   try {
